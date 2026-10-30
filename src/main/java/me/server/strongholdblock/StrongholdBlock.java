@@ -1,5 +1,6 @@
 package me.server.strongholdblock;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -17,11 +18,17 @@ import org.bukkit.util.BoundingBox;
 public class StrongholdBlock extends JavaPlugin implements Listener {
 
     private static final String BYPASS = "strongholdblock.bypass";
-    private static final String MESSAGE = "§cStrongholds are off limits on this server.";
+    private static final String BLOCKED_MESSAGE = "§cStrongholds are off limits on this server.";
+    private static final String EJECTED_MESSAGE = "§cStrongholds are off limits. You were sent to spawn.";
 
     @Override
     public void onEnable() {
         getServer().getPluginManager().registerEvents(this, this);
+
+        // Every second (20 ticks), send anyone found inside a stronghold to spawn.
+        // First run after 2 seconds (40 ticks) so the server has finished starting.
+        getServer().getScheduler().runTaskTimer(this, this::ejectSweep, 40L, 20L);
+
         getLogger().info("StrongholdBlock enabled.");
     }
 
@@ -44,6 +51,18 @@ public class StrongholdBlock extends JavaPlugin implements Listener {
         return false;
     }
 
+    private void ejectSweep() {
+        for (Player player : getServer().getOnlinePlayers()) {
+            if (player.hasPermission(BYPASS)) continue;
+
+            if (inStronghold(player.getLocation())) {
+                Location spawn = player.getWorld().getSpawnLocation().add(0.5, 0, 0.5);
+                player.teleport(spawn);
+                player.sendMessage(EJECTED_MESSAGE);
+            }
+        }
+    }
+
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         Location from = event.getFrom();
@@ -60,10 +79,9 @@ public class StrongholdBlock extends JavaPlugin implements Listener {
         Player player = event.getPlayer();
         if (player.hasPermission(BYPASS)) return;
 
-        // Allow movement if they are already inside, so nobody gets frozen in place.
         if (inStronghold(to) && !inStronghold(from)) {
             event.setCancelled(true);
-            player.sendActionBar(net.kyori.adventure.text.Component.text(MESSAGE));
+            player.sendActionBar(Component.text(BLOCKED_MESSAGE));
         }
     }
 
@@ -79,7 +97,7 @@ public class StrongholdBlock extends JavaPlugin implements Listener {
 
         if (inStronghold(to)) {
             event.setCancelled(true);
-            player.sendActionBar(net.kyori.adventure.text.Component.text(MESSAGE));
+            player.sendActionBar(Component.text(BLOCKED_MESSAGE));
         }
     }
 }

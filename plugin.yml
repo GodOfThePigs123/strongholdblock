@@ -1,0 +1,9 @@
+name: StrongholdBlock
+version: 1.0.0
+main: me.server.strongholdblock.StrongholdBlock
+api-version: '1.21'
+description: Blocks players from entering strongholds.
+permissions:
+  strongholdblock.bypass:
+    description: Allows entering strongholds
+    default: op
